@@ -1,5 +1,5 @@
 PushNPull = {
-    VERSION = "0.1.1",
+    VERSION = "0.1.2",
 
     -- If pnp is active, will also be put in your avatar vars
     active = true,
@@ -313,7 +313,13 @@ if host:isHost() and pnp.autoActionWheel then
             return { text = (pnp.ignoreWhitelist and "Whitelist Disabled" or "Whitelist Enabled"), color = (pnp.ignoreWhitelist and "#d24a4a" or "#60b044") }
         end
 
-        action_wheel:getCurrentPage():newAction():setTitle(toJson({ isEnabled(),"\n", isWhitelist() }))
+        local page = action_wheel:getCurrentPage()
+        if not page then
+            page = action_wheel:newPage("Main Page")
+            action_wheel:setPage(page)
+        end
+
+        page:newAction():setTitle(toJson({ isEnabled(),"\n", isWhitelist() }))
             :toggleColor(0.3, 0.4, 0.8)
             :item("minecraft:lead")
             :setOnLeftClick(function(self)
