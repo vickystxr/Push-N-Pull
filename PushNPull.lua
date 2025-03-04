@@ -1,5 +1,5 @@
 PushNPull = {
-    VERSION = "0.1.0",
+    VERSION = "0.1.1",
 
     -- If pnp is active, will also be put in your avatar vars
     active = true,
@@ -7,6 +7,8 @@ PushNPull = {
     ignoreWhitelist = false,
     -- Friend whitelist, either hardcode it here or set it elsewhere, read live so changes can be made at runtime
     WhitelistedPlayers = {},
+    -- Automatically makes an action wheel button
+    autoActionWheel = true,
 
     -- Change stuff here if you want
     config = {
@@ -113,7 +115,7 @@ function pnpf.validOverallChecker(ent)
     if not ent then return; end
     if not player:isLoaded() or not ent:isLoaded() then return; end
     local vars = pnp.cachedAvatarVars[ent:getUUID()] or pnpf.grabVariables(ent);
-    if not vars.enabled or not vars then return; end
+    if not vars or not vars.enabled then return; end
     return vars;
 end
 
@@ -238,7 +240,7 @@ function pnpf.setInstruction(target, instructionMode, instruction)
 
     if instructionMode then
         inst[target] = inst[target] or {};
-        if type(instruction.value):lower():find("vector") then
+        if instruction and type(instruction.value):lower():find("vector") then
             instruction.value = { instruction.value:unpack() }
         end
 
@@ -265,7 +267,7 @@ function events.entity_init()
     pnpf.avatarStore(pnp.avatarVar)
 end
 
-function events.tick()
+function events.RENDER()
     if not pnp.active then return; end
     local playerVars = pnpf.grabVariables(player);
 
@@ -299,7 +301,7 @@ function events.tick()
     end
 end
 
-if host:isHost() then
+if host:isHost() and pnp.autoActionWheel then
     function events.entity_init()
         -- you can see my code did a massive nosedive here because i got tired of this project
         
