@@ -1,5 +1,5 @@
 PushNPull = {
-    VERSION = "0.1.2",
+    VERSION = "0.1.3",
 
     -- If pnp is active, will also be put in your avatar vars
     active = true,
