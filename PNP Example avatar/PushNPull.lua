@@ -231,7 +231,7 @@ end
 --- Sets instructions for the targetted entity, if Mode is nil it'll remove the mode (setPos or setVel come to mind), if vector is nil, it'll remove the vector thus nothing happening.
 ---@param target string|Entity
 ---@param instructionMode string|nil
----@param instruction {value:Vector3, extra:any}|nil
+---@param instruction {value:Vector3, timer?:number, extra:any}|nil
 function pnpf.setInstruction(target, instructionMode, instruction)
     if type(target) ~= "string" then
         target = target:getUUID()
@@ -242,6 +242,7 @@ function pnpf.setInstruction(target, instructionMode, instruction)
         inst[target] = inst[target] or {};
         if instruction and type(instruction.value):lower():find("vector") then
             instruction.value = { instruction.value:unpack() }
+            instruction.timer = instruction.timer or 5
         end
 
         inst[target][instructionMode] = instruction;
@@ -251,6 +252,7 @@ function pnpf.setInstruction(target, instructionMode, instruction)
 
     pnpf.avatarStore();
 end
+
 
 function events.entity_init()
     pnp.playerName = player:getName()
@@ -267,6 +269,24 @@ function events.entity_init()
     pnpf.avatarStore(pnp.avatarVar)
 end
 
+
+-- Does instructions timeouts, pretty much counts them down to 0 and removes them if needed
+function events.tick()
+    for uuid, instructions in pairs(pnp.avatarVar.instructions) do
+        if instructions then
+            for mode, value in pairs(instructions) do
+                value.timer = value.timer - 1
+                if value.timer <= 0 then
+                    pnpf.setInstruction(uuid, mode,nil)
+                end
+            end
+        end
+    end
+end
+
+
+local worldTime = 0;
+-- Main Instruction handler, Don't touch anything here FOR SURE if you don't know what you're doing.
 function events.RENDER()
     if not pnp.active then return; end
     local playerVars = pnpf.grabVariables(player);
@@ -282,9 +302,12 @@ function events.RENDER()
             if instructions then
                 for key, value in pairs(instructions) do
                     pcall(function()
-                        vars.whileGrabbing(player, value, key, playerVars)
-                        pnpf.whileGrabbed(grabber, value, key, vars)
                         pnp.movementFunctions[key](value.value);
+                        if world.getTime() ~= worldTime then
+                            worldTime = world.getTime()
+                            vars.whileGrabbing(player, value, key, playerVars)
+                            pnpf.whileGrabbed(grabber, value, key, vars)
+                        end
                     end)
                 end
             end
@@ -304,6 +327,12 @@ end
 if host:isHost() and pnp.autoActionWheel then
     function events.entity_init()
         -- you can see my code did a massive nosedive here because i got tired of this project
+        if config:load("PNPActive") ~= nil then
+            pnp.active = config:load("PNPActive")
+        end
+        if config:load("PNPIgnoreWhitelist") ~= nil then
+            pnp.ignoreWhitelist = config:load("PNPIgnoreWhitelist")
+        end
         
         local function isEnabled()
             return { text = (pnp.active and "PNP Enabled" or "PNP Disabled"), color = (pnp.active and "#60b044" or "#d24a4a") }
@@ -323,13 +352,15 @@ if host:isHost() and pnp.autoActionWheel then
             :toggleColor(0.3, 0.4, 0.8)
             :item("minecraft:lead")
             :setOnLeftClick(function(self)
-                pnp.active = not pnp.active
+                pnp.active = not pnp.active;
+                config:save("PNPActive",pnp.active)
                 pings.pnpSetEnabled(pnp.active)
                 printJson(toJson(isEnabled()))
                 self:setTitle(toJson({ isEnabled(),"\n", isWhitelist() }))
             end)
             :setOnRightClick(function(self)
-                pnp.ignoreWhitelist = not pnp.ignoreWhitelist
+                pnp.ignoreWhitelist = not pnp.ignoreWhitelist;
+                config:save("PNPIgnoreWhitelist",pnp.ignoreWhitelist)
                 pings.pnpSetEnabled(nil, pnp.ignoreWhitelist)
                 printJson(toJson(isWhitelist()))
                 self:setTitle(toJson({ isEnabled(),"\n", isWhitelist() }))

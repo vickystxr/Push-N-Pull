@@ -12,10 +12,7 @@ pnp.config.launchDistance = 30;
 
 pnp.autoActionWheel = true
 -- all these changes are setup now and applied on entity_init !
--- If you got vscode hovering over them should give you a nice tooltip telling you what they do
-
--- Using run later to do some "fancy" stuff
-local runLater = require("runLater")
+-- If you got vscode hovering over them should give you a nice tooltip telling you what they do.
 
 --[[
     CUSTOMIZE ANYTHING UNDER THIS WITH WHATFUCKEN EVER CODE YOU WANT
@@ -87,12 +84,8 @@ function pnp.functions.throwEntity(ent, v)
     local vars = pnp.functions.validOverallChecker(ent)
     if not vars then return; end
 
-    runLater(1,function ()
-        pnp.functions.setInstruction(ent, "setVel", { value = v, extra = "forceChoke" })
-    end)
-    runLater(2, function()
-        pnp.functions.setInstruction(ent, nil)
-    end)
+    -- New thing added! Timers! It adds a timeout to each instruction (defaults to 5 ticks) and it ticks off the instruction, neat right?
+    pnp.functions.setInstruction(ent, "setVel", { value = v, extra = "throw", timer=3 })
 end
 
 
@@ -100,7 +93,7 @@ end
 function pings.launch(uuid)
     -- In here I remove the person from the tick events list so I dont regrab them!
     -- True is there so i remove them!
-    pings.pnpSetMode("forceChoke", uuid, true);
+    pnp.functions.setMode("forceChoke", uuid, true);
 
     local t = world.getEntity(uuid)
     if type(t) == "PlayerAPI" then
