@@ -8,7 +8,7 @@ pnp.ignoreWhitelist = false;
 pnp.WhitelistedPlayers["vickystxr"] = true
 pnp.WhitelistedPlayers["ghostystxr"] = true
 
-pnp.config.launchDistance = 30;
+pnp.config.launchStrength = 30;
 
 pnp.autoActionWheel = true
 -- all these changes are setup now and applied on entity_init !
@@ -98,7 +98,7 @@ function pings.launch(uuid)
     local t = world.getEntity(uuid)
     if type(t) == "PlayerAPI" then
         -- Running the function as thou can see
-        pnp.functions.throwEntity(t,player:getVelocity() + (lookPos(pnp.config.launchDistance) - t:getPos()) * 0.1)
+        pnp.functions.throwEntity(t,player:getVelocity() + (lookPos(pnp.config.launchStrength) - t:getPos()) * 0.1)
     end
     lastForceChokeTarget = nil;
 end
