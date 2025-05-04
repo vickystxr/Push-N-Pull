@@ -1,5 +1,5 @@
 PushNPull = {
-	VERSION = "0.1.6",
+	VERSION = "0.1.7",
 
 	--- If pnp is active, will also be put in your avatar vars
 	active = true,
@@ -242,10 +242,11 @@ function PushNPull.functions.whitelistPlayer(user, remove)
 
 		PushNPull.avatarVar.whitelist = PushNPull.WhitelistedPlayers;
 		PushNPull.avatarVar.clientIsWhitelisted = PushNPull.ignoreWhitelist or
-			(PushNPull.WhitelistedPlayers[client:getViewer():getUUID()] ~= nil) or
-			(PushNPull.WhitelistedPlayers[client:getViewer():getName()] ~= nil);
+			(PushNPull.WhitelistedPlayers[client:getViewer():getUUID()]) or
+			(PushNPull.WhitelistedPlayers[client:getViewer():getName()]);
 
 		PushNPull.functions.avatarStore();
+		print(PushNPull.WhitelistedPlayers)
 	end
 
 	return user;
@@ -269,8 +270,8 @@ function PushNPull.functions.setEnabled(active, ignoreWhitelist)
 	PushNPull.avatarVar.ignoreWhitelist = PushNPull.ignoreWhitelist;
 
 	PushNPull.avatarVar.clientIsWhitelisted = PushNPull.ignoreWhitelist or
-		(PushNPull.WhitelistedPlayers[client:getViewer():getUUID()] ~= nil) or
-		(PushNPull.WhitelistedPlayers[client:getViewer():getName()] ~= nil);
+		(PushNPull.WhitelistedPlayers[client:getViewer():getUUID()]) or
+		(PushNPull.WhitelistedPlayers[client:getViewer():getName()]);
 
 	PushNPull.functions.avatarStore()
 end
@@ -327,8 +328,8 @@ function events.entity_init()
 		ignoreWhitelist = PushNPull.ignoreWhitelist,
 		whitelist = PushNPull.WhitelistedPlayers, -- You can remove this if you don't want to expose your whitelist.
 		clientIsWhitelisted = PushNPull.ignoreWhitelist or
-			(PushNPull.WhitelistedPlayers[client:getViewer():getUUID()] ~= nil) or
-			(PushNPull.WhitelistedPlayers[client:getViewer():getName()] ~= nil)
+			(PushNPull.WhitelistedPlayers[client:getViewer():getUUID()]) or
+			(PushNPull.WhitelistedPlayers[client:getViewer():getName()])
 	}
 
 	PushNPull.functions.avatarStore(PushNPull.avatarVar)
