@@ -260,9 +260,14 @@ end
 ---@param active? boolean
 ---@param ignoreWhitelist? boolean
 function PushNPull.functions.setEnabled(active, ignoreWhitelist)
-	PushNPull.active = type(active) == "boolean" and active or PushNPull.active;
-	PushNPull.ignoreWhitelist = type(ignoreWhitelist) == "boolean" and ignoreWhitelist or
-		PushNPull.ignoreWhitelist;
+	if type(active) == "boolean" then
+		PushNPull.active = active;
+	end
+
+	if type(ignoreWhitelist) == "boolean" then
+		PushNPull.ignoreWhitelist = ignoreWhitelist;
+	end
+
 	PushNPull.avatarVar.enabled = PushNPull.active;
 	PushNPull.avatarVar.ignoreWhitelist = PushNPull.ignoreWhitelist;
 
