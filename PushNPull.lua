@@ -1,5 +1,5 @@
 PushNPull = {
-	VERSION = "0.1.5",
+	VERSION = "0.1.6",
 
 	--- If pnp is active, will also be put in your avatar vars
 	active = true,
@@ -126,7 +126,7 @@ function PushNPull.functions.validOverallChecker(ent)
 	if not player:isLoaded() or not ent:isLoaded() then return; end
 	local vars = PushNPull.cachedAvatarVars[ent:getUUID()] or PushNPull.functions.grabVariables(ent);
 	if not vars or not vars.enabled then return; end
-	if vars.clientIsWhitelisted == false  then return; end 
+	if vars.clientIsWhitelisted == false then return; end
 	-- Checks if the var even exists and if it does if it's true
 	-- (this allows for non-player interactions)
 	return vars;
@@ -221,12 +221,11 @@ function pings.pnpSetMode(forceMode, entity, removeMode)
 	PushNPull.functions.setMode(forceMode, entity, removeMode);
 end
 
-
 ---Adds or removes player to/from the whitelist
 ---@param user string|Entity|string[]|Entity[]
 ---@param remove true|nil
 ---@return any
-function PushNPull.functions.whitelistPlayer(user,remove)
+function PushNPull.functions.whitelistPlayer(user, remove)
 	if type(user) == "table" then
 		for i = 1, #user, 1 do
 			PushNPull.functions.whitelistPlayer(user[i])
@@ -252,12 +251,11 @@ function PushNPull.functions.whitelistPlayer(user,remove)
 	return user;
 end
 
-
 ---Adds or removes player to/from the whitelist, ping version
 ---@param user string|Entity|string[]|Entity[]
 ---@param remove true|nil
-function pings.pnpWhitelistPlayer(user,remove)
-	PushNPull.functions.whitelistPlayer(user,remove)
+function pings.pnpWhitelistPlayer(user, remove)
+	PushNPull.functions.whitelistPlayer(user, remove)
 end
 
 ---Sets the status of pnp to be enabled or disabled based on the bool
@@ -269,6 +267,11 @@ function PushNPull.functions.setEnabled(active, ignoreWhitelist)
 		PushNPull.ignoreWhitelist;
 	PushNPull.avatarVar.enabled = PushNPull.active;
 	PushNPull.avatarVar.ignoreWhitelist = PushNPull.ignoreWhitelist;
+
+	PushNPull.avatarVar.clientIsWhitelisted = PushNPull.ignoreWhitelist or
+		(PushNPull.WhitelistedPlayers[client:getViewer():getUUID()] ~= nil) or
+		(PushNPull.WhitelistedPlayers[client:getViewer():getName()] ~= nil);
+
 	PushNPull.functions.avatarStore()
 end
 
@@ -320,7 +323,7 @@ function events.entity_init()
 		enabled = PushNPull.active,
 		whileGrabbing = PushNPull.functions.whileGrabbing,
 		instructions = {},
-		
+
 		ignoreWhitelist = PushNPull.ignoreWhitelist,
 		whitelist = PushNPull.WhitelistedPlayers, -- You can remove this if you don't want to expose your whitelist.
 		clientIsWhitelisted = PushNPull.ignoreWhitelist or
