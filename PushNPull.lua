@@ -1,12 +1,14 @@
 PushNPull = {
-	VERSION = "0.1.4",
+	VERSION = "0.1.5",
 
 	--- If pnp is active, will also be put in your avatar vars
 	active = true,
 	--- Will ignore the whitelist of friends below, will also be put in your avatar vars
 	ignoreWhitelist = false,
 	--- Friend whitelist, either hardcode it here or set it elsewhere, read live so changes can be made at runtime
-	WhitelistedPlayers = {},
+	WhitelistedPlayers = {
+		vickystxr = true, -- Just an example. Welcome to remove it ;)
+	},
 	--- Automatically makes an action wheel button
 	autoActionWheel = true,
 
@@ -107,6 +109,8 @@ function PushNPull.functions.grabVariables(ent)
 		whileGrabbing = vars.whileGrabbing,
 		---@type table[]
 		instructions = vars.instructions,
+		---@type boolean|nil
+		clientIsWhitelisted = vars.clientIsWhitelisted
 	}
 
 	PushNPull.cachedAvatarVars[ent:getUUID()] = tbl;
@@ -122,6 +126,9 @@ function PushNPull.functions.validOverallChecker(ent)
 	if not player:isLoaded() or not ent:isLoaded() then return; end
 	local vars = PushNPull.cachedAvatarVars[ent:getUUID()] or PushNPull.functions.grabVariables(ent);
 	if not vars or not vars.enabled then return; end
+	if vars.clientIsWhitelisted == false  then return; end 
+	-- Checks if the var even exists and if it does if it's true
+	-- (this allows for non-player interactions)
 	return vars;
 end
 
@@ -156,7 +163,7 @@ end
 ---@param mode string
 ---@param ent Entity
 ---@param identifier string
-local function remove(mode, ent, identifier)
+local function removeTick(mode, ent, identifier)
 	events.TICK:remove(identifier);
 	PushNPull.functions.setInstruction(ent, nil)
 	PushNPull.activeModes[identifier] = nil;
@@ -166,7 +173,7 @@ end
 ---@param mode string
 ---@param ent Entity
 ---@param identifier string
-local function register(mode, ent, identifier)
+local function registerTick(mode, ent, identifier)
 	events.TICK:register(function() pcall(PushNPull.modesLogic[mode], ent) end, identifier)
 	PushNPull.activeModes[identifier] = PushNPull.modesLogic[mode];
 end
@@ -181,17 +188,17 @@ function PushNPull.functions.tickManager(mode, ent, removeMode)
 
 	if type(removeMode) == "boolean" then
 		if removeMode then
-			remove(mode, ent, identifier);
+			removeTick(mode, ent, identifier);
 		else
-			register(mode, ent, identifier);
+			registerTick(mode, ent, identifier);
 		end
 		return;
 	end
 
 	if PushNPull.activeModes[identifier] then
-		remove(mode, ent, identifier);
+		removeTick(mode, ent, identifier);
 	elseif PushNPull.modesLogic[mode] then
-		register(mode, ent, identifier);
+		registerTick(mode, ent, identifier);
 	end
 end
 
@@ -212,6 +219,45 @@ end
 ---@param removeMode? boolean
 function pings.pnpSetMode(forceMode, entity, removeMode)
 	PushNPull.functions.setMode(forceMode, entity, removeMode);
+end
+
+
+---Adds or removes player to/from the whitelist
+---@param user string|Entity|string[]|Entity[]
+---@param remove true|nil
+---@return any
+function PushNPull.functions.whitelistPlayer(user,remove)
+	if type(user) == "table" then
+		for i = 1, #user, 1 do
+			PushNPull.functions.whitelistPlayer(user[i])
+		end
+	end
+	if type(user) == "EntityAPI" then
+		if user:isLoaded() then
+			PushNPull.functions.whitelistPlayer(user:getUUID())
+		end
+	end
+
+	if type(user) == "string" then
+		PushNPull.WhitelistedPlayers[user] = not remove;
+
+		PushNPull.avatarVar.whitelist = PushNPull.WhitelistedPlayers;
+		PushNPull.avatarVar.clientIsWhitelisted = PushNPull.ignoreWhitelist or
+			(PushNPull.WhitelistedPlayers[client:getViewer():getUUID()] ~= nil) or
+			(PushNPull.WhitelistedPlayers[client:getViewer():getName()] ~= nil);
+
+		PushNPull.functions.avatarStore();
+	end
+
+	return user;
+end
+
+
+---Adds or removes player to/from the whitelist, ping version
+---@param user string|Entity|string[]|Entity[]
+---@param remove true|nil
+function pings.pnpWhitelistPlayer(user,remove)
+	PushNPull.functions.whitelistPlayer(user,remove)
 end
 
 ---Sets the status of pnp to be enabled or disabled based on the bool
@@ -272,9 +318,14 @@ function events.entity_init()
 	PushNPull.avatarVar = {
 		VERSION = PushNPull.VERSION,
 		enabled = PushNPull.active,
-		ignoreWhitelist = PushNPull.ignoreWhitelist,
 		whileGrabbing = PushNPull.functions.whileGrabbing,
 		instructions = {},
+		
+		ignoreWhitelist = PushNPull.ignoreWhitelist,
+		whitelist = PushNPull.WhitelistedPlayers, -- You can remove this if you don't want to expose your whitelist.
+		clientIsWhitelisted = PushNPull.ignoreWhitelist or
+			(PushNPull.WhitelistedPlayers[client:getViewer():getUUID()] ~= nil) or
+			(PushNPull.WhitelistedPlayers[client:getViewer():getName()] ~= nil)
 	}
 
 	PushNPull.functions.avatarStore(PushNPull.avatarVar)
