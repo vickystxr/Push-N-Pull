@@ -6,9 +6,7 @@ PushNPull = {
 	--- Will ignore the whitelist of friends below, will also be put in your avatar vars
 	ignoreWhitelist = false,
 	--- Friend whitelist, either hardcode it here or set it elsewhere, read live so changes can be made at runtime
-	WhitelistedPlayers = {
-		vickystxr = true, -- Just an example. Welcome to remove it ;)
-	},
+	WhitelistedPlayers = {},
 	--- Automatically makes an action wheel button
 	autoActionWheel = true,
 
@@ -246,7 +244,6 @@ function PushNPull.functions.whitelistPlayer(user, remove)
 			(PushNPull.WhitelistedPlayers[client:getViewer():getName()]);
 
 		PushNPull.functions.avatarStore();
-		print(PushNPull.WhitelistedPlayers)
 	end
 
 	return user;
