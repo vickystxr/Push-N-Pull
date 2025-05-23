@@ -32,15 +32,16 @@ end
 function pnp.functions.whileGrabbing(ent, v)
     if v.extra == "forceChoke" then
         if world.getTime() % 2 == 0 then
-            particles:newParticle("minecraft:end_rod",ent:getPos()+vec(0,ent:getBoundingBox().y/2,0))
-            particles:newParticle("minecraft:glow",ent:getPos()+vec(0,ent:getBoundingBox().y/2,0))
-            particles:newParticle("minecraft:enchant",ent:getPos()+vec(0,ent:getBoundingBox().y/2,0))
+            particles:newParticle("minecraft:end_rod", ent:getPos() + vec(0, ent:getBoundingBox().y / 2, 0))
+            particles:newParticle("minecraft:glow", ent:getPos() + vec(0, ent:getBoundingBox().y / 2, 0))
+            particles:newParticle("minecraft:enchant", ent:getPos() + vec(0, ent:getBoundingBox().y / 2, 0))
         end
     else
         if world.getTime() % 3 == 0 then
             local dist = (ent:getPos() - player:getPos()):length() * 3;
             for i = 1, dist, 1 do
-                particles:newParticle("minecraft:end_rod",(player:getPos() + vec(0, player:getBoundingBox().y / 2, 0) + (ent:getPos() - player:getPos()) / dist * i))
+                particles:newParticle("minecraft:end_rod",
+                    (player:getPos() + vec(0, player:getBoundingBox().y / 2, 0) + (ent:getPos() - player:getPos()) / dist * i))
             end
         end
     end
@@ -50,20 +51,19 @@ end
 -- Seems basic cuz it is!
 -- If you have vscode Hover over the function to see what is passed through.
 function pnp.functions.whileGrabbed()
-    particles:newParticle("minecraft:damage_indicator",player:getPos())
+    particles:newParticle("minecraft:damage_indicator", player:getPos())
 end
-
 
 -- Here i setup a quick keybind to grab the person I'm looking at
 -- then using pings.pnpSetMode, passing through the pnp.modesLogic[INDEX], in this example INDEX is forceChoke!
 -- Look at forceChoke in the main file to look at what it does! and how to make your own function!
--- Then I also pass through the UUID of the person I'm doing this on and if I want to remove or add it to the tick events list, 
+-- Then I also pass through the UUID of the person I'm doing this on and if I want to remove or add it to the tick events list,
 -- in this case I put in false because I want this to be added to the list!
 local lastForceChokeTarget;
 local key = keybinds:newKeybind("Force choke", "key.keyboard.z", false)
 key:setOnPress(function()
     -- Using a raycast cuz fancy :3c
-    local t = raycast:entity(lookPos(0),lookPos(60), function(e) return e ~= player; end);
+    local t = raycast:entity(lookPos(0), lookPos(60), function(e) return e ~= player; end);
     if not t then return end;
     lastForceChokeTarget = t:getUUID()
     pings.pnpSetMode("forceChoke", lastForceChokeTarget, false)
@@ -76,7 +76,7 @@ key:setOnRelease(function()
     lastForceChokeTarget = nil;
 end)
 
--- This is a function I made custom (aka does not come with the pnp file) that lets me throw whoever I want, 
+-- This is a function I made custom (aka does not come with the pnp file) that lets me throw whoever I want,
 -- technically this can be ran at any time! as long as you pass through an entity and a vector.
 ---@param ent Entity
 ---@param v Vector3
@@ -85,9 +85,8 @@ function pnp.functions.throwEntity(ent, v)
     if not vars then return; end
 
     -- New thing added! Timers! It adds a timeout to each instruction (defaults to 5 ticks) and it ticks off the instruction, neat right?
-    pnp.functions.setInstruction(ent, "setVel", { value = v, extra = "throw", timer=3 })
+    pnp.functions.setInstruction(ent, "setVel", { value = v, extra = "throw", timer = 3 })
 end
-
 
 -- Little ping so I can run it with the keybind!
 function pings.launch(uuid)
@@ -98,10 +97,13 @@ function pings.launch(uuid)
     local t = world.getEntity(uuid)
     if type(t) == "PlayerAPI" then
         -- Running the function as thou can see
-        pnp.functions.throwEntity(t,player:getVelocity() + (lookPos(pnp.config.launchStrength) - t:getPos()) * 0.1)
+        pnp.functions.throwEntity(t, (lookPos(pnp.config.launchStrength) - player:getPos()) * 0.1)
     end
     lastForceChokeTarget = nil;
 end
+
+-- Making this all host only
+if not host:isHost() then return; end
 
 -- See how easy this is! I check if the lastForceChokeTarget isnt nil / has a UUID and i throw em >:3
 keybinds:newKeybind("Force Launch", "key.keyboard.x", false):setOnPress(function(modifiers, self)
@@ -115,15 +117,26 @@ end)
 function events.tick()
     -- Get if player is swinging
     if player:getSwingTime() == 1 then
+        local item = player:getHeldItem():getID():gsub("^.+:", "");
+        local t = player:getTargetedEntity();
+        if not t then return; end
+        local name,uuid = t:getName(), t:getUUID()
         -- Check if I'm holding a lead! and if im looking at something!
-        if player:getHeldItem():getID():gsub("^.+:", "") == "lead" then
-            local t = player:getTargetedEntity();
-            if t then
-                -- Then yoink i grab them, as you can see in the final field i didnt put in a true or false, this is because i want to toggle!
-                -- Well then i did a small little nil check
-                -- As you can see every tick event is stored in pnp.activeModes
-                pings.pnpSetMode("leash", t:getUUID(), pnp.activeModes["leash" .. t:getUUID()] ~= nil)
-            end
+        if item == "lead" and t then
+            -- Then yoink i grab them, as you can see in the final field i didnt put in a true or false, this is because i want to toggle!
+            -- Well then i did a small little nil check
+            -- As you can see every tick event is stored in pnp.activeModes
+            pings.pnpSetMode("leash", uuid, pnp.activeModes["leash" .. uuid] ~= nil)
+        end
+        if item == "feather" and t then
+            local v = (pnp.WhitelistedPlayers[uuid] or pnp.WhitelistedPlayers[name]);
+            pings.pnpWhitelistPlayer(name, v)
+            v = not v;
+            printJson(toJson({
+                text = (v and "Added " or "Removed ") ..
+                    name .. " to/from the whitelist.\n",
+                color = v and "green" or "red",
+            }))
         end
     end
 end

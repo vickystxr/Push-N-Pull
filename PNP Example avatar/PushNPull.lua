@@ -1,11 +1,14 @@
+-- #REGION MAIN PNP TABLE
+
 PushNPull = {
-	VERSION = "0.1.7",
+	VERSION = "0.1.8",
 
 	--- If pnp is active, will also be put in your avatar vars
 	active = true,
 	--- Will ignore the whitelist of friends below, will also be put in your avatar vars
 	ignoreWhitelist = false,
 	--- Friend whitelist, either hardcode it here or set it elsewhere, read live so changes can be made at runtime
+	---@type table<string,boolean>
 	WhitelistedPlayers = {},
 	--- Automatically makes an action wheel button
 	autoActionWheel = true,
@@ -33,19 +36,25 @@ PushNPull = {
 		whileGrabbing = function(ent, value, mode, vars) end,
 	},
 	--- Here is were setVel and setPos will be put
+	---@type function[]
 	movementFunctions = {},
 	--- Logic for the modes, like forcechoke and leash
 	--- Every mode gets passed an entity
+	---@type function[]
 	modesLogic = {},
 	--- The active modes, dont mess anything here it's all handled by code to register / unregister tick events
 	activeModes = {},
 	--- Caching of avatar vars for saving instructions, only used in the modesLogic
+	---@type table[]
 	cachedAvatarVars = {},
 
 	--- Your own avatar vars, handled by code and updated
 	avatarVar = {},
 }
 
+-- #ENDREGION
+
+-- #REGION SIMPLE TYPE CHECKERS FOR MOVEMENT AND BASIC MOVEMENT FUNCTIONS
 
 function PushNPull.functions.isValidVector(v, ...)
 	return type(v) == "Vector3" and v
@@ -89,6 +98,10 @@ function PushNPull.movementFunctions.setPos(...)
 	end
 end
 
+-- #ENDREGION
+
+-- #REGION VARIABLE VALIDITY CHECKING
+
 ---Grabs the necessary variables that pnp uses for its logic, pretty easy to change and modify if needed
 ---@param ent Entity
 ---@return table|nil
@@ -108,7 +121,7 @@ function PushNPull.functions.grabVariables(ent)
 		---@type table[]
 		instructions = vars.instructions,
 		---@type boolean|nil
-		clientIsWhitelisted = vars.clientIsWhitelisted
+		clientIsWhitelisted = vars.clientIsWhitelisted,
 	}
 
 	PushNPull.cachedAvatarVars[ent:getUUID()] = tbl;
@@ -129,6 +142,10 @@ function PushNPull.functions.validOverallChecker(ent)
 	-- (this allows for non-player interactions)
 	return vars;
 end
+
+-- #ENDREGION
+
+-- #REGION BASIC PRESET MODES
 
 ---Simple "leash" for players, keeps them inside a radiu
 ---@param ent Entity
@@ -156,6 +173,10 @@ function PushNPull.modesLogic.forceChoke(ent)
 		:clamped(0, 2);
 	PushNPull.functions.setInstruction(ent, "setVel", { value = v, extra = "forceChoke" })
 end
+
+-- #ENDREGION
+
+-- #REGION INSTRUCTION TICK MANAGING
 
 ---Removes instruction from tickEvent
 ---@param mode string
@@ -206,7 +227,7 @@ end
 ---@param removeMode? boolean
 function PushNPull.functions.setMode(forceMode, entity, removeMode)
 	if not entity then return; end
-	if type(entity) == "string" then entity = world.getEntity(entity); end
+	if type(entity) == "string" then entity = world.getPlayers()[entity] or world.getEntity(entity); end
 
 	PushNPull.functions.tickManager(forceMode, entity, removeMode)
 end
@@ -219,9 +240,13 @@ function pings.pnpSetMode(forceMode, entity, removeMode)
 	PushNPull.functions.setMode(forceMode, entity, removeMode);
 end
 
+-- #ENDREGION
+
+-- #REGION WHITELISTING AND TOGGLING PNP FUNCTIONS
+
 ---Adds or removes player to/from the whitelist
 ---@param user string|Entity|string[]|Entity[]
----@param remove true|nil
+---@param remove? boolean
 ---@return any
 function PushNPull.functions.whitelistPlayer(user, remove)
 	if type(user) == "table" then
@@ -256,6 +281,8 @@ function pings.pnpWhitelistPlayer(user, remove)
 	PushNPull.functions.whitelistPlayer(user, remove)
 end
 
+
+
 ---Sets the status of pnp to be enabled or disabled based on the bool
 ---@param active? boolean
 ---@param ignoreWhitelist? boolean
@@ -285,6 +312,10 @@ function pings.pnpSetEnabled(active, ignoreWhitelist)
 	PushNPull.functions.setEnabled(active, ignoreWhitelist)
 end
 
+-- #ENDREGION
+
+-- #REGION AVATAR STORE HANDLING
+
 ---Stores all the necessary pnp data to the avatar store
 ---@param tbl table|nil
 function PushNPull.functions.avatarStore(tbl)
@@ -300,7 +331,7 @@ function PushNPull.functions.setInstruction(target, instructionMode, instruction
 	if type(target) ~= "string" then
 		target = target:getUUID()
 	end
-	local inst = PushNPull.avatarVar.instructions;
+	local inst = PushNPull.avatarVar.instructions or {};
 
 	if instructionMode then
 		inst[target] = inst[target] or {};
@@ -317,25 +348,33 @@ function PushNPull.functions.setInstruction(target, instructionMode, instruction
 	PushNPull.functions.avatarStore();
 end
 
+-- #ENDREGION
+
+
 function events.entity_init()
 	PushNPull.playerName = player:getName()
 	PushNPull.playerUUID = player:getUUID()
-
-	PushNPull.avatarVar = {
-		VERSION = PushNPull.VERSION,
-		enabled = PushNPull.active,
-		whileGrabbing = PushNPull.functions.whileGrabbing,
-		instructions = {},
-
-		ignoreWhitelist = PushNPull.ignoreWhitelist,
-		whitelist = PushNPull.WhitelistedPlayers, -- You can remove this if you don't want to expose your whitelist.
-		clientIsWhitelisted = PushNPull.ignoreWhitelist or
-			(PushNPull.WhitelistedPlayers[client:getViewer():getUUID()]) or
-			(PushNPull.WhitelistedPlayers[client:getViewer():getName()])
-	}
-
-	PushNPull.functions.avatarStore(PushNPull.avatarVar)
 end
+
+-- #REGION AVATAR VAR INITIALIZATION
+
+PushNPull.avatarVar = {
+	VERSION = PushNPull.VERSION,
+	enabled = PushNPull.active,
+	whileGrabbing = PushNPull.functions.whileGrabbing,
+	instructions = {},
+
+	ignoreWhitelist = PushNPull.ignoreWhitelist,
+	whitelist = PushNPull.WhitelistedPlayers, -- You can remove this if you don't want to expose your whitelist.
+	clientIsWhitelisted = PushNPull.ignoreWhitelist or
+		(PushNPull.WhitelistedPlayers[client:getViewer():getUUID()]) or
+		(PushNPull.WhitelistedPlayers[client:getViewer():getName()]),
+}
+PushNPull.functions.avatarStore(PushNPull.avatarVar)
+
+-- #ENDREGION
+
+-- #REGION MAIN LOOP
 
 -- Does instructions timeouts, pretty much counts them down to 0 and removes them if needed
 function events.tick()
@@ -391,6 +430,12 @@ function events.render()
 	end
 end
 
+-- #ENDREGION
+
+-- #REGION SYNCING AND HOST ONLY ACTION WHEEL
+
+if not host:isHost() then return PushNPull; end
+
 -- Some basic syncing, remove this if you want but it'll cause some desync
 function events.tick()
 	if world.getTime() % 100 == 0 then
@@ -398,7 +443,7 @@ function events.tick()
 	end
 end
 
-if host:isHost() and PushNPull.autoActionWheel then
+if PushNPull.autoActionWheel then
 	function events.entity_init()
 		-- you can see my code did a massive nosedive here because i got tired of this project
 		if config:load("PNPActive") ~= nil then
@@ -441,6 +486,8 @@ if host:isHost() and PushNPull.autoActionWheel then
 			end)
 	end
 end
+
+-- #ENDREGION
 
 
 return PushNPull;
